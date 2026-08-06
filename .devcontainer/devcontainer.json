@@ -12,7 +12,8 @@
     "ghcr.io/devcontainers/features/rust:1": {
       "version": "latest",
       "profile": "minimal"
-    }
+    },
+    "ghcr.io/wandb/catnip/feature:1": {}
   },
 
   "mounts": [
@@ -33,7 +34,7 @@
       ]
     }
   },
-
+  "forwardPorts": [6369],
   "portsAttributes": {
     "5173": {
       "label": "OpenUI UI Dev Server",

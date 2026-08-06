@@ -4,6 +4,33 @@ import server from 'mocks/server'
 import { DESKTOP_RESOLUTION_HEIGHT, DESKTOP_RESOLUTION_WIDTH } from 'testUtils'
 import 'whatwg-fetch'
 
+// Mock indexedDB
+const indexedDB = {
+	open: () => ({
+		onupgradeneeded: undefined,
+		onsuccess: undefined,
+		onerror: undefined,
+		result: {
+			createObjectStore: () => ({
+				createIndex: () => {},
+				transaction: () => {}
+			}),
+			transaction: () => ({
+				objectStore: () => ({
+					put: () => {},
+					get: () => {},
+					getAll: () => {},
+					delete: () => {}
+				})
+			})
+		}
+	})
+}
+
+Object.defineProperty(window, 'indexedDB', {
+	value: indexedDB
+})
+
 beforeAll(() => {
 	server.listen({ onUnhandledRequest: 'error' })
 
@@ -30,7 +57,6 @@ beforeAll(() => {
 				removeEventListener: (_: 'change', listener: () => void): void => {
 					const index = listeners.indexOf(listener)
 					if (index >= 0) {
-						// eslint-disable-next-line @typescript-eslint/no-magic-numbers
 						listeners.splice(index, 1)
 					}
 				}

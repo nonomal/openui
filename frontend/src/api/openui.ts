@@ -1,6 +1,8 @@
-import type { HistoryItem } from '../state/atoms/history'
+import type { HistoryItem, ItemWrapper } from '../state/atoms/history'
 
 export interface SessionData {
+	email?: string
+	max_tokens?: number
 	username?: string
 	token_count?: number
 }
@@ -14,17 +16,41 @@ interface ErrorBody {
 
 const API_HOST = (import.meta.env.VITE_API_HOST ?? '/v1') as string
 
-export async function share(id: string, item: HistoryItem) {
+export async function share(id: string, item: ItemWrapper, versionIdx: number) {
 	const r = await fetch(`${API_HOST}/share/${id}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			prompt: item.prompt,
-			html: item.html,
+			prompt: item.prompt(versionIdx),
+			html: item.pureHTML(versionIdx),
 			name: item.name,
 			emoji: item.emoji
+		})
+	})
+	if (r.status !== 201) {
+		const body = (await r.json()) as ErrorBody
+		throw new Error(body.error.message)
+	}
+}
+
+export async function voteRequest(
+	vote: boolean,
+	item: ItemWrapper,
+	versionIdx: number
+) {
+	const r = await fetch(`${API_HOST}/vote`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			prompt: item.prompt(versionIdx),
+			html: item.pureHTML(versionIdx),
+			name: item.name,
+			emoji: item.emoji,
+			vote
 		})
 	})
 	if (r.status !== 201) {
@@ -60,11 +86,11 @@ export async function saveSession(session: SessionData): Promise<void> {
 
 export async function getSession(): Promise<SessionData | undefined> {
 	const r = await fetch(`${API_HOST}/session`)
-	// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+
 	if (r.status === 404) {
 		return
 	}
-	// eslint-disable-next-line @typescript-eslint/consistent-return, consistent-return
+
 	return (await r.json()) as SessionData
 }
 
@@ -87,7 +113,7 @@ async function getPublicKey(username: string, create = false) {
 			credentials: 'same-origin'
 		}
 	)
-	// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+
 	if (r.status !== 200) {
 		throw new Error(`Unexpected response ${r.status}: ${await r.text()}`)
 	}
@@ -132,7 +158,7 @@ async function post(
 			headers: { 'content-type': 'application/json' }
 		}
 	)
-	// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+
 	if (req.status !== 200) {
 		throw new Error(`Unexpected response ${req.status}: ${await req.text()}`)
 	}
@@ -179,8 +205,8 @@ export async function auth(username: string): Promise<boolean> {
 			publicKey.allowCredentials[0].id as unknown as string
 		)
 		// TODO: if a user attempts to re-register they'll be given the option
-		// to scan a QR code to restore if any of the existing credentials don't
-		// still exist.  We may want to add the ability to register multiple passkeys.
+		// To scan a QR code to restore if any of the existing credentials don't
+		// Still exist.  We may want to add the ability to register multiple passkeys.
 		// We might be able to use aaguid to determine machine uniqueness
 	}
 	let creds
